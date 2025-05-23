@@ -13,11 +13,13 @@ class AudioFeatureExtractor:
     def extract_features(self, audio_path):
         """Extrai features de um arquivo de áudio"""
         try:
-           
+            # Carrega o áudio
             y, sr = librosa.load(audio_path, sr=self.sample_rate)
             
+            # Features espectrais
             features = {}
             
+            # MFCCs
             mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=self.n_mfcc)
             features.update({
                 f'mfcc_mean_{i}': np.mean(mfccs[i]) for i in range(self.n_mfcc)
@@ -26,27 +28,33 @@ class AudioFeatureExtractor:
                 f'mfcc_std_{i}': np.std(mfccs[i]) for i in range(self.n_mfcc)
             })
             
+            # Spectral Centroid
             spectral_centroid = librosa.feature.spectral_centroid(y=y, sr=sr)
             features['spectral_centroid_mean'] = np.mean(spectral_centroid)
             features['spectral_centroid_std'] = np.std(spectral_centroid)
             
+            # Spectral Rolloff
             spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)
             features['spectral_rolloff_mean'] = np.mean(spectral_rolloff)
             features['spectral_rolloff_std'] = np.std(spectral_rolloff)
             
+            # Zero Crossing Rate
             zcr = librosa.feature.zero_crossing_rate(y)
             features['zcr_mean'] = np.mean(zcr)
             features['zcr_std'] = np.std(zcr)
             
+            # Chroma
             chroma = librosa.feature.chroma_stft(y=y, sr=sr)
             features.update({
                 f'chroma_mean_{i}': np.mean(chroma[i]) for i in range(12)
             })
             
+            # Spectral Bandwidth
             spectral_bandwidth = librosa.feature.spectral_bandwidth(y=y, sr=sr)
             features['spectral_bandwidth_mean'] = np.mean(spectral_bandwidth)
             features['spectral_bandwidth_std'] = np.std(spectral_bandwidth)
             
+            # Tempo
             tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
             features['tempo'] = tempo
             
@@ -61,6 +69,7 @@ class AudioFeatureExtractor:
         data_path = Path(data_path)
         features_list = []
         
+        # Gêneros do GTZAN
         genres = ['blues', 'classical', 'country', 'disco', 'hiphop', 
                  'jazz', 'metal', 'pop', 'reggae', 'rock']
         
@@ -77,6 +86,7 @@ class AudioFeatureExtractor:
                     features['filename'] = audio_file.name
                     features_list.append(features)
         
+        # Cria DataFrame
         df = pd.DataFrame(features_list)
         
         if output_path:

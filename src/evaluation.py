@@ -10,7 +10,7 @@ class ModelEvaluator:
     
     def evaluate_model(self, y_true, y_pred):
         """Avalia o desempenho do modelo"""
-        
+        # Métricas básicas
         accuracy = accuracy_score(y_true, y_pred)
         precision = precision_score(y_true, y_pred, average='weighted')
         recall = recall_score(y_true, y_pred, average='weighted')
@@ -22,6 +22,7 @@ class ModelEvaluator:
         print(f"Recall: {recall:.4f}")
         print(f"F1-Score: {f1:.4f}")
         
+        # Relatório detalhado
         genre_names = [self.genre_mapping[i] for i in sorted(self.genre_mapping.keys())]
         print("\n=== RELATÓRIO DETALHADO ===")
         print(classification_report(y_true, y_pred, target_names=genre_names))
@@ -54,12 +55,13 @@ class ModelEvaluator:
         genre_names = [self.genre_mapping[i] for i in sorted(self.genre_mapping.keys())]
         report = classification_report(y_true, y_pred, target_names=genre_names, output_dict=True)
         
-        
+        # Extrai métricas por classe
         genres = list(report.keys())[:-3]  # Remove 'accuracy', 'macro avg', 'weighted avg'
         precision_scores = [report[genre]['precision'] for genre in genres]
         recall_scores = [report[genre]['recall'] for genre in genres]
         f1_scores = [report[genre]['f1-score'] for genre in genres]
         
+        # Plot
         x = np.arange(len(genres))
         width = 0.25
         

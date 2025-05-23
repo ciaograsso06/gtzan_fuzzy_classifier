@@ -21,6 +21,7 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         selector = SelectKBest(score_func=f_classif, k=self.n_features)
         X_selected = selector.fit_transform(X, y)
         
+        # Pega os índices das features selecionadas
         selected_indices = selector.get_support(indices=True)
         self.feature_names = [f"feature_{i}" for i in selected_indices]
         
@@ -33,12 +34,14 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         for i in range(self.n_features):
             feature_range = [X[:, i].min() - 0.1, X[:, i].max() + 0.1]
             
+            # Cria variável linguística para a feature
             antecedent = ctrl.Antecedent(
                 np.arange(feature_range[0], feature_range[1], 
                          (feature_range[1] - feature_range[0])/100),
                 f'feature_{i}'
             )
             
+            # Define funções de pertinência (baixo, médio, alto)
             antecedent['low'] = fuzz.trimf(antecedent.universe, 
                                          [feature_range[0], feature_range[0], 
                                           np.percentile(X[:, i], 33)])
@@ -56,6 +59,7 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         """Cria variável de saída para as classes"""
         self.consequent = ctrl.Consequent(np.arange(0, n_classes, 1), 'genre')
         
+        # Uma função de pertinência para cada classe
         for i in range(n_classes):
             self.consequent[f'class_{i}'] = fuzz.trimf(
                 self.consequent.universe, [i-0.4, i, i+0.4]
@@ -66,6 +70,7 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         n_classes = len(np.unique(y))
         rules = []
         
+        # Calcula centróides para cada classe
         self.centers_ = []
         for class_idx in range(n_classes):
             class_mask = y == class_idx
@@ -75,15 +80,16 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
             else:
                 self.centers_.append(np.zeros(self.n_features))
         
+        # Gera regras baseadas nos centróides
         for class_idx in range(n_classes):
             center = self.centers_[class_idx]
             
-            
+            # Determina o termo linguístico para cada feature
             rule_antecedents = []
             for feat_idx in range(self.n_features):
                 feat_val = center[feat_idx]
                 
-                
+                # Determina qual termo linguístico usar
                 if feat_val <= np.percentile(X[:, feat_idx], 33):
                     term = 'low'
                 elif feat_val <= np.percentile(X[:, feat_idx], 67):
@@ -93,6 +99,7 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
                 
                 rule_antecedents.append(self.antecedents[feat_idx][term])
             
+            # Cria a regra
             if len(rule_antecedents) > 1:
                 rule_condition = rule_antecedents[0]
                 for ant in rule_antecedents[1:]:
@@ -110,15 +117,19 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = np.unique(y)
         n_classes = len(self.classes_)
         
+        # Seleciona melhores features
         X_selected, self.selected_indices_ = self._select_best_features(X, y)
         
+        # Cria funções de pertinência
         self._create_membership_functions(X_selected)
         
+        # Cria variável de saída
         self._create_output_variable(n_classes)
         
-        
+        # Gera regras
         rules = self._generate_rules(X_selected, y)
         
+        # Cria sistema de controle fuzzy
         self.fuzzy_system = ctrl.ControlSystem(rules)
         self.fuzzy_sim = ctrl.ControlSystemSimulation(self.fuzzy_system)
         
@@ -131,23 +142,28 @@ class FuzzyMusicClassifier(BaseEstimator, ClassifierMixin):
         
         predictions = []
         
+        # Seleciona as mesmas features usadas no treino
         X_selected = X.iloc[:, self.selected_indices_] if hasattr(X, 'iloc') else X[:, self.selected_indices_]
         
         for i in range(len(X_selected)):
             try:
+                # Define inputs para o sistema fuzzy
                 for j in range(self.n_features):
                     self.fuzzy_sim.input[f'feature_{j}'] = X_selected[i, j]
                 
+                # Computa resultado
                 self.fuzzy_sim.compute()
                 
+                # Pega a classe predita
                 output_val = self.fuzzy_sim.output['genre']
                 predicted_class = int(np.round(output_val))
                 
+                # Garante que a classe está no range válido
                 predicted_class = np.clip(predicted_class, 0, len(self.classes_) - 1)
                 predictions.append(predicted_class)
                 
             except Exception as e:
-               
+                # Em caso de erro, usa a classe mais frequente
                 predictions.append(0)
         
         return np.array(predictions)
